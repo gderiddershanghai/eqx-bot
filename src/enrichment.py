@@ -5,61 +5,54 @@ from src.schemas import CountryMetadata
 class ContentEnricher:
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model = "gpt-4o-mini"
-        
-        # Simple pricing for gpt-4o-mini (approximate)
-        # Input: $0.15 / 1M tokens, Output: $0.60 / 1M tokens
-        self.input_cost_per_m = 0.15
-        self.output_cost_per_m = 0.60
+        self.debug = os.getenv("DEBUG", "False").lower() == "true"
 
-    def _calculate_cost(self, usage):
-        if not usage:
-            return 0.0
-        input_cost = (usage.prompt_tokens / 1_000_000) * self.input_cost_per_m
-        output_cost = (usage.completion_tokens / 1_000_000) * self.output_cost_per_m
-        return input_cost + output_cost
+    def extract_metadata(self, text):
+        """
+        Extracts structured metadata using GPT-4o-mini.
+        """
+        if self.debug:
+            print("  > [DEBUG] Generating dummy metadata...")
+            # --- UPDATED DUMMY DATA ---
+            dummy = CountryMetadata(
+                country="Debug_istan",
+                iso_code="DBG",
+                region="Localhost",
+                income_group="High Income",  
+                eqx_rank=99,
+                other_countries_mentioned=["Utopia", "Atlantis"], # <--- New field
+                themes=["debug", "test"],
+                trend_direction="flat"
+            )
+            return dummy, {"cost": 0.0}
 
-    def extract_metadata(self, text: str):
-        """
-        Returns: (CountryMetadata object, dict_of_usage_stats)
-        """
+        # Real API Call (No changes needed to logic, just the prompt will now fill the new model)
         completion = self.client.beta.chat.completions.parse(
-            model=self.model,
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Extract the following metadata from the country report. Be precise."},
-                {"role": "user", "content": text[:15000]} 
+                {"role": "system", "content": "Extract structured metadata from the following text."},
+                {"role": "user", "content": text[:4000]} # Send first 4k chars context
             ],
             response_format=CountryMetadata,
         )
-        
-        # Capture Tracking Data
-        usage = completion.usage
-        stats = {
-            "input_tokens": usage.prompt_tokens,
-            "output_tokens": usage.completion_tokens,
-            "cost": self._calculate_cost(usage)
-        }
-        
-        return completion.choices[0].message.parsed, stats
 
-    def generate_summary(self, text: str):
-        """
-        Returns: (summary_string, dict_of_usage_stats)
-        """
-        response = self.client.chat.completions.create(
-            model=self.model,
+        usage = completion.usage
+        cost = (usage.prompt_tokens * 0.15 / 1e6) + (usage.completion_tokens * 0.60 / 1e6)
+        
+        return completion.choices[0].message.parsed, {"cost": cost}
+
+    def generate_summary(self, text):
+        if self.debug:
+            return "This is a debug summary.", {"cost": 0.0}
+            
+        completion = self.client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Summarize the following text in one dense, keyword-rich sentence."},
-                {"role": "user", "content": text[:10000]}
-            ],
-            max_tokens=250, 
+                {"role": "system", "content": "Summarize this country report in 3 sentences, focusing on key strengths and weaknesses."},
+                {"role": "user", "content": text[:10000]} 
+            ]
         )
+        usage = completion.usage
+        cost = (usage.prompt_tokens * 0.15 / 1e6) + (usage.completion_tokens * 0.60 / 1e6)
         
-        usage = response.usage
-        stats = {
-            "input_tokens": usage.prompt_tokens,
-            "output_tokens": usage.completion_tokens,
-            "cost": self._calculate_cost(usage)
-        }
-        
-        return response.choices[0].message.content.strip(), stats
+        return completion.choices[0].message.content, {"cost": cost}
