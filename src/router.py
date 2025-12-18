@@ -1,6 +1,9 @@
 import os
 from openai import OpenAI
 from src.schemas import QueryIntent
+from dotenv import load_dotenv
+
+load_dotenv()   
 
 class IntentRouter:
     def __init__(self):

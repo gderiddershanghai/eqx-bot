@@ -11,12 +11,12 @@ class RAGOrchestrator:
         self.router = IntentRouter()
 
     def process_query(self, query: str):
-        print(f"\n  > 🔍 Orchestrator: Received '{query}'")
+        print(f"\n  >  Orchestrator: Received '{query}'")
         t0 = time.time()
 
         # 1. ROUTING
         intent = self.router.analyze_query(query)
-        print(f"  > 🧠 Router Analysis:")
+        print(f"  >  Router Analysis:")
         print(f"     - Intent: {intent.category}")
         print(f"     - Complexity: {intent.complexity}")
         print(f"     - Chart Needed: {intent.chart_needed}")
@@ -71,7 +71,7 @@ class RAGOrchestrator:
         if intent.chart_needed:
             answer += "\n\n[System Note: A chart was requested. In the future, I will render a plot here based on the data.]"
 
-        print(f"  > ✅ Finished in {(time.time() - t0):.2f}s")
+        print(f"  >  Finished in {(time.time() - t0):.2f}s")
         return answer
 
     def close(self):
